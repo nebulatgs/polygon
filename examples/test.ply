@@ -1,0 +1,12 @@
+fn main() {
+    let a = "Starting...";
+    console.log(a);
+
+    loop {
+        if (!awake()) {
+            break;
+        }
+        console.log("Wake up!");
+        sleep(2000u);
+    }
+}
