@@ -1,4 +1,6 @@
-#[derive(Debug)]
+use std::rc::Rc;
+
+#[derive(Debug, Clone)]
 pub enum Keyword {
     LET,
     CONST,
@@ -9,18 +11,18 @@ pub enum Keyword {
     FOR,
     LOOP,
     BREAK,
-    CONTINUE
+    CONTINUE,
 }
-#[derive(Debug)]
-pub enum Literal<'a> {
-    STRING(&'a str), 
-    SIGNEDINT(isize), 
-    USIGNEDINT(usize), 
+#[derive(Debug, Clone)]
+pub enum Literal {
+    STRING(Rc<str>),
+    SIGNEDINT(isize),
+    USIGNEDINT(usize),
     FLOAT(f64),
     BOOL(bool),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Operator {
     EQUAL,
     NOTEQUAL,
@@ -48,25 +50,25 @@ pub enum Operator {
     DIVASSIGN,
     DIVIDE,
 
-    DOT
+    DOT,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Separator {
     LCURLY,
     RCURLY,
     LPARAN,
     RPARAN,
     SEMICOLON,
-    COMMA
+    COMMA,
 }
 
-#[derive(Debug)]
-pub enum Token<'a> {
+#[derive(Debug, Clone)]
+pub enum Token {
     KEYWORD(Keyword),
-    IDENTIFIER(&'a str),
+    IDENTIFIER(Rc<str>),
     SEPARATOR(Separator),
     OPERATOR(Operator),
-    LITERAL(Literal<'a>),
-    COMMENT(&'a str)
+    LITERAL(Literal),
+    COMMENT(Rc<str>),
 }

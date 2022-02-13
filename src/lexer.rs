@@ -1,26 +1,14 @@
-use crate::tokens::{Literal, Operator, Separator, Token, Keyword};
+use crate::tokens::{Keyword, Literal, Operator, Separator, Token};
 
-enum LexerState {
-    DEFAULT,
-
-    // Literals
-    LITSTRING,
-    LITNUMERIC,
-    LITBOOL,
-    //
-}
-
-pub struct Lexer {
-    source: String,
-    state: LexerState,
+pub struct Lexer<'a> {
+    source: &'a str,
     pos: usize,
 }
 
-impl Lexer {
-    pub fn new(source: String) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(source: &'a str) -> Self {
         Self {
             source,
-            state: LexerState::DEFAULT,
             pos: 0usize,
         }
     }
@@ -28,60 +16,56 @@ impl Lexer {
         self.pos += 1;
         val
     }
-    fn lookahead_token<'a>(
-        &mut self,
-        first: Option<char>,
-        second: Option<char>,
-    ) -> Option<Token<'a>> {
+    fn lookahead_token(&mut self, first: Option<&'a str>, second: Option<&'a str>) -> Option<Token> {
         match first {
-            Some('{') => Some(Token::SEPARATOR(Separator::LCURLY)),
-            Some('}') => Some(Token::SEPARATOR(Separator::RCURLY)),
+            Some("{") => Some(Token::SEPARATOR(Separator::LCURLY)),
+            Some("}") => Some(Token::SEPARATOR(Separator::RCURLY)),
 
-            Some('(') => Some(Token::SEPARATOR(Separator::LPARAN)),
-            Some(')') => Some(Token::SEPARATOR(Separator::RPARAN)),
+            Some("(") => Some(Token::SEPARATOR(Separator::LPARAN)),
+            Some(")") => Some(Token::SEPARATOR(Separator::RPARAN)),
 
-            Some(';') => Some(Token::SEPARATOR(Separator::SEMICOLON)),
-            Some(',') => Some(Token::SEPARATOR(Separator::COMMA)),
-            Some('.') => Some(Token::OPERATOR(Operator::DOT)),
+            Some(";") => Some(Token::SEPARATOR(Separator::SEMICOLON)),
+            Some(",") => Some(Token::SEPARATOR(Separator::COMMA)),
+            Some(".") => Some(Token::OPERATOR(Operator::DOT)),
 
-            Some('=') => match second {
-                Some('=') => self.consume(Some(Token::OPERATOR(Operator::EQUAL))),
+            Some("=") => match second {
+                Some("=") => self.consume(Some(Token::OPERATOR(Operator::EQUAL))),
                 None => Some(Token::OPERATOR(Operator::ASSIGNMENT)),
                 _ => None,
             },
-            Some('!') => match second {
-                Some('=') => self.consume(Some(Token::OPERATOR(Operator::NOTEQUAL))),
+            Some("!") => match second {
+                Some("=") => self.consume(Some(Token::OPERATOR(Operator::NOTEQUAL))),
                 _ => Some(Token::OPERATOR(Operator::NOT)),
             },
-            Some('+') => match second {
-                Some('+') => self.consume(Some(Token::OPERATOR(Operator::INCREMENT))),
-                Some('=') => self.consume(Some(Token::OPERATOR(Operator::INCASSIGN))),
+            Some("+") => match second {
+                Some("+") => self.consume(Some(Token::OPERATOR(Operator::INCREMENT))),
+                Some("=") => self.consume(Some(Token::OPERATOR(Operator::INCASSIGN))),
                 None => Some(Token::OPERATOR(Operator::ADD)),
                 _ => None,
             },
-            Some('-') => match second {
-                Some('-') => self.consume(Some(Token::OPERATOR(Operator::DECREMENT))),
-                Some('=') => self.consume(Some(Token::OPERATOR(Operator::DECASSIGN))),
+            Some("-") => match second {
+                Some("-") => self.consume(Some(Token::OPERATOR(Operator::DECREMENT))),
+                Some("=") => self.consume(Some(Token::OPERATOR(Operator::DECASSIGN))),
                 None => Some(Token::OPERATOR(Operator::SUBTRACT)),
                 _ => None,
             },
-            Some('*') => match second {
-                Some('=') => self.consume(Some(Token::OPERATOR(Operator::MULTASSIGN))),
+            Some("*") => match second {
+                Some("=") => self.consume(Some(Token::OPERATOR(Operator::MULTASSIGN))),
                 None => Some(Token::OPERATOR(Operator::MULTIPLY)),
                 _ => None,
             },
-            Some('/') => match second {
-                Some('=') => self.consume(Some(Token::OPERATOR(Operator::DIVASSIGN))),
+            Some("/") => match second {
+                Some("=") => self.consume(Some(Token::OPERATOR(Operator::DIVASSIGN))),
                 None => Some(Token::OPERATOR(Operator::DIVIDE)),
                 _ => None,
             },
-            Some('&') => match second {
-                Some('&') => self.consume(Some(Token::OPERATOR(Operator::AND))),
+            Some("&") => match second {
+                Some("&") => self.consume(Some(Token::OPERATOR(Operator::AND))),
                 None => Some(Token::OPERATOR(Operator::BITAND)),
                 _ => None,
             },
-            Some('|') => match second {
-                Some('|') => self.consume(Some(Token::OPERATOR(Operator::OR))),
+            Some("|") => match second {
+                Some("|") => self.consume(Some(Token::OPERATOR(Operator::OR))),
                 None => Some(Token::OPERATOR(Operator::BITOR)),
                 _ => None,
             },
@@ -95,8 +79,8 @@ impl Lexer {
             return token;
         }
         match first {
-            Some('"') => self.process_string_literal(),
-            Some('0'..='9' | '-') => self.process_numeric_literal(),
+            Some("\"") => self.process_string_literal(),
+            Some(token) if token.contains(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']) => self.process_numeric_literal(),
 
             None => None,
             _ => {
@@ -110,21 +94,20 @@ impl Lexer {
     }
 
     fn process_numeric_literal(&mut self) -> Option<Token> {
-        self.state = LexerState::LITSTRING;
         let start = self.pos;
         loop {
             if let Some(next_char) = self.get_char() {
                 match next_char {
-                    '0'..='9' | '-' | '.' => (),
-                    'u' => {
+                    token if token.contains(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']) => (),
+                    "u" => {
                         let raw = &self.source[start - 1..self.pos - 1];
                         return Some(Token::LITERAL(Literal::USIGNEDINT(raw.parse().unwrap())));
                     }
-                    'i' => {
+                    "i" => {
                         let raw = &self.source[start - 1..self.pos - 1];
                         return Some(Token::LITERAL(Literal::SIGNEDINT(raw.parse().unwrap())));
                     }
-                    'f' => {
+                    "f" => {
                         let raw = &self.source[start - 1..self.pos - 1];
                         return Some(Token::LITERAL(Literal::FLOAT(raw.parse().unwrap())));
                     }
@@ -135,8 +118,7 @@ impl Lexer {
             return None;
         }
     }
-    fn process_boolean_literal<'a>(&mut self) -> Option<Token<'a>> {
-        self.state = LexerState::LITSTRING;
+    fn process_boolean_literal(&mut self) -> Option<Token> {
         let start = self.pos;
         if self.pos + 3 > self.source.len() {
             return None;
@@ -157,13 +139,12 @@ impl Lexer {
         None
     }
     fn process_string_literal(&mut self) -> Option<Token> {
-        self.state = LexerState::LITNUMERIC;
         let start = self.pos;
         loop {
             if let Some(next_char) = self.get_char() {
-                if next_char == '"' {
+                if next_char.eq("\"") {
                     return Some(Token::LITERAL(Literal::STRING(
-                        &self.source[start..self.pos - 1],
+                        self.source[start..self.pos - 1].into(),
                     )));
                 }
                 continue;
@@ -180,7 +161,7 @@ impl Lexer {
                 let pos = self.pos;
                 if self.lookahead_token(first, second).is_some() || Self::is_whitespace(c) {
                     self.pos = pos - 1;
-                    break Some(self.source[start-1..self.pos].trim());
+                    break Some(self.source[start - 1..self.pos].trim());
                 }
                 continue;
             }
@@ -198,31 +179,37 @@ impl Lexer {
             Some("loop") => Some(Token::KEYWORD(Keyword::LOOP)),
             Some("break") => Some(Token::KEYWORD(Keyword::BREAK)),
             Some("continue") => Some(Token::KEYWORD(Keyword::CONTINUE)),
-            Some(identifier) => Some(Token::IDENTIFIER(identifier)),
-            None => None
+            Some(identifier) => Some(Token::IDENTIFIER(identifier.into())),
+            None => None,
         }
     }
 
-    fn get_char(&mut self) -> Option<char> {
-        self.pos += 1;
-        self.source.chars().skip(self.pos - 1).next()
+    fn get_at_index(&self, index: usize) -> Option<&'a str> {
+        self.source.get(index..index+1)
     }
-    fn get_chars(&mut self) -> (Option<char>, Option<char>) {
+
+    fn get_char(&mut self) -> Option<&'a str> {
+        let c = self.get_at_index(self.pos);
         self.pos += 1;
-        let mut it = self.source.chars().skip(self.pos - 1);
-        (it.next(), it.next())
+        c
     }
-    fn is_whitespace(c: char) -> bool {
+    fn get_chars(&mut self) -> (Option<&'a str>, Option<&'a str>) {
+        let first = self.get_char();
+        let second = self.get_char();
+        self.pos -= 1;
+        (first, second)
+    }
+    fn is_whitespace(c: &'a str) -> bool {
         match c {
-            ' ' | '\t' | '\n' | '\r' => true,
-            _ => false
+            " " | "\t" | "\n" | "\r" => true,
+            _ => false,
         }
     }
-    fn get_filtered_chars(&mut self) -> (Option<char>, Option<char>) {
+    fn get_filtered_chars(&mut self) -> (Option<&'a str>, Option<&'a str>) {
         let first = loop {
             let potential = self.get_char();
             match potential {
-                Some(' ' | '\t' | '\n' | '\r') => {
+                Some(" " | "\t" | "\n" | "\r") => {
                     continue;
                 }
                 None => {
@@ -237,7 +224,7 @@ impl Lexer {
             let potential = self.get_char();
             self.pos -= 1;
             match potential {
-                Some(' ' | '\t' | '\n' | '\r') => None,
+                Some(" " | "\t" | "\n" | "\r") => None,
                 None => None,
                 _ => potential,
             }
