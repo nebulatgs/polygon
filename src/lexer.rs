@@ -80,7 +80,7 @@ impl<'a> Lexer<'a> {
         }
         match first {
             Some("\"") => self.process_string_literal(),
-            Some(token) if token.contains(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']) => self.process_numeric_literal(),
+            Some(token) if token.contains(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.', '+']) => self.process_numeric_literal(),
 
             None => None,
             _ => {
@@ -98,7 +98,7 @@ impl<'a> Lexer<'a> {
         loop {
             if let Some(next_char) = self.get_char() {
                 match next_char {
-                    token if token.contains(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']) => (),
+                    token if token.contains(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.', '+']) => (),
                     "u" => {
                         let raw = &self.source[start - 1..self.pos - 1];
                         return Some(Token::LITERAL(Literal::USIGNEDINT(raw.parse().unwrap())));
